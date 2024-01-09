@@ -1,0 +1,90 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+// Import the ERC20 interface
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract ProductStore {
+    address public owner;
+    IERC20 public token; // The ERC20 token contract address
+    uint256 public productPrice;
+
+    ProductPurchased(address buyer, uint256 amount);
+
+    constructor(address _tokenAddress, uint256 _productPrice) {
+        owner = msg.sender;
+        token = IERC20(_tokenAddress);
+        productPrice = _productPrice;
+    }
+
+    // Function to allow users to purchase products using the ERC20 token
+    function purchaseProduct() {
+        require(token.allowance(msg.sender, address(this)) >= productPrice, "Insufficient allowance");
+        require(token.transferFrom(msg.sender, owner, productPrice), "Transfer failed");
+        emit ProductPurchased(msg.sender, productPrice);
+    }
+
+    // Function to change the product price (only the owner can do this)
+    function changeProductPrice(uint256 _newPrice) {
+        require(msg.sender == owner, "Only the owner can change the price");
+        productPrice = _newPrice;
+    }
+
+    // Function to withdraw tokens from the contract (only the owner can do this)
+    function withdrawTokens(uint256 _amount) {
+        require(msg.sender == owner, "Only the owner can withdraw tokens");
+        token.transfer(msg.sender, _amount);
+    }
+}
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
+contract ProductStore is ERC721 {
+    address public owner;
+    IERC20 public token; // The ERC20 token contract address
+    uint256 public productPrice;
+    uint256 public nextTokenId;
+
+    ProductPurchased(address buyer, uint256 amount, uint256 tokenId);
+
+    constructor(
+        address _tokenAddress,
+        uint256 _productPrice,
+        string memory _name,
+        string memory _symbol
+    ) ERC721(_name, _symbol) {
+        owner = msg.sender;
+        token = IERC20(_tokenAddress);
+        productPrice = _productPrice;
+        nextTokenId = 1;
+    }
+
+    // Function to allow users to purchase products using the ERC20 token
+    function purchaseProduct() {
+        require(token.allowance(msg.sender, address(this)) >= productPrice, "Insufficient allowance");
+        require(token.transferFrom(msg.sender, owner, productPrice), "Transfer failed");
+
+        // Mint a new NFT as a bill for the user
+        _safeMint(msg.sender, nextTokenId);
+        emit ProductPurchased(msg.sender, productPrice, nextTokenId);
+        
+        // Increment the nextTokenId for the next bill
+        nextTokenId++;
+    }
+
+    // Function to change the product price (only the owner can do this)
+    function changeProductPrice(uint256 _newPrice) {
+        require(msg.sender == owner, "Only the owner can change the price");
+        productPrice = _newPrice;
+    }
+
+    // Function to withdraw tokens from the contract (only the owner can do this)
+    function withdrawTokens(uint256 _amount) {
+        require(msg.sender == owner, "Only the owner can withdraw tokens");
+        token.transfer(msg.sender, _amount);
+    }
+}
